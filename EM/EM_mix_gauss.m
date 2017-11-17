@@ -88,7 +88,7 @@ for r = 1:iterations
     end
     
     %update best clustering
-    if logL > logL_old
+    if logL >= logL_old
         fprintf('-Improvement made\n')
         mu_best = mu;
         for j = 1:k

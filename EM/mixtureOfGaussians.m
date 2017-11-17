@@ -29,7 +29,7 @@ iterations = 7;
 
 %% Visualize Mixture of Gaussians
 gridSize = 100;
-u = linspace(-20, 20, gridSize);
+u = linspace(-10, 10, gridSize);
 [A B] = meshgrid(u, u);
 gridX = [A(:), B(:)];
 
