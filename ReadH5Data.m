@@ -16,9 +16,11 @@ num_IDs = 0;
 lane_change_threshold = 3;  % meters
 ts = 0.1;                   % sample time (s)
 t_int = 15;                 % time interval (s)
+t_win = 5;                  % time window step (s)
 s_int = t_int/ts;           % timestep interval
+s_win = t_win/ts;            
 datasets = 1:3;             % specify which dataset to read from H5 file
-savedata = 1;               % flag to save data
+savedata = 0;               % flag to save data
 
 % Read Smoothed Data
 filename = 'C:\Users\bjack\Documents\NGSIM Data\ngsim_feature_trajectories.h5';
@@ -55,13 +57,18 @@ for dataset = 1:3
     end
     
     % Create samples
-    intervals = 0:s_int:n_timesteps;
+    %intervals = 0:s_int:n_timesteps;
+    start_times = 0:s_win:n_timesteps-s_int;
     n_samples_dataset = n_samples;
-    for i = 1:length(intervals)-1
-        inds = intervals(i)+1:intervals(i+1);
-        full_sample = len>i*s_int;
+    for i = 1:length(start_times)
+        %inds = intervals(i)+1:intervals(i+1);
+        inds = start_times(i)+1:start_times(i)+s_int;
+        full_sample = len>inds(end);
         subdata = data(inds,full_sample,:);
-        n_subsamples = size(subdata,2);
+        n_subsamples(i,dataset) = size(subdata,2);
+        if n_subsamples(i,dataset) == 0
+            a = 1;
+        end
         
         v_idx = find(full_sample);
         n_lane_changes = sum(abs(diff(subdata(:,:,1)))>lane_change_threshold);
@@ -71,7 +78,7 @@ for dataset = 1:3
         avg_pos = sum(subdata(:,:,feature_inds('relative_offset')))/s_int;
         std_pos = sum(subdata(:,:,feature_inds('relative_offset')));
         
-        X(n_samples+1:n_samples+n_subsamples,:) = [v_idx;n_lane_changes; avg_vel; max_vel; avg_acc; avg_pos; std_pos]';
+        X(n_samples+1:n_samples+n_subsamples(i,dataset),:) = [v_idx;n_lane_changes; avg_vel; max_vel; avg_acc; avg_pos; std_pos]';
         n_samples = size(X,1);
     end
     
@@ -108,5 +115,5 @@ end
 clear feature_names feature_descriptions feature_units
 
 if savedata
-    save('trainingdata','X','features')
+    save('trainingdata_1sec_window','X','features')
 end
