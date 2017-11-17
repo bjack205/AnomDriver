@@ -1,6 +1,5 @@
 % Read 101 data
-addpath('data')
-filename = 'i101_trajectories-0750am-0805am.txt';
+filename = 'C:\Users\bjack\Documents\NGSIM Data\i101_trajectories-0750am-0805am.txt';
 if ~exist('data','var')
     data = dlmread(filename);
 end
