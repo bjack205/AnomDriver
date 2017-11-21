@@ -22,6 +22,5 @@ for i = 1:length(intervals-1)
         ID = car_ids(j);
         vel = mean(data_segment(inds,12)); % 
         len = mean(data_segment(inds,9)); % Vehicle length
-        
     end
 end
