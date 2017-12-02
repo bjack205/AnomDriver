@@ -40,7 +40,6 @@ classdef Simulator < handle
     %       Calculates the driver state (corresponding to the citations)
     %       for a set of vehicles.
     
-    
     properties
         % Data
         scene = [];
@@ -67,6 +66,7 @@ classdef Simulator < handle
         action_max = 1; % (1) if action is integer of number of citations to issue
                         % (0) if action is binary vector same size as state.Driver 
         print_info = 1;
+        fast_mode = 1;
         
     end
     
@@ -86,12 +86,21 @@ classdef Simulator < handle
             
             % Initalize Scene
             sim.cur_id = 1;
-            sim.scene = array2table(zeros(0,sim.cmodel.n_features));
-            sim.scene.Properties.VariableNames = sim.cmodel.ColNames;
+            if sim.fast_mode
+                sim.scene = zeros(0,sim.cmodel.n_features);
+            else
+                sim.scene = array2table(zeros(0,sim.cmodel.n_features));
+                sim.scene.Properties.VariableNames = sim.cmodel.ColNames;
+            end
             sim.UpdateScene;
             
             % Initialize scene to have a uniform distibution of time steps
-            sim.scene.Time = randi(sim.cmodel.mean_time,sim.n_vehicles,1);
+            initial_time = randi(sim.cmodel.mean_time,sim.n_vehicles,1);
+            if sim.fast_mode
+                sim.scene(:,sim.cmodel.Col('Time')) = initial_time;
+            else
+                sim.scene.Time = initial_time;
+            end
             
         end
         
@@ -104,7 +113,7 @@ classdef Simulator < handle
             % Check if vehicle IDs are valid
             [inscene,not_inscene] = sim.InScene(state.Driver_IDs);
             if ~all(inscene)
-                sim.Info(sprintf('Vehicle IDs are not valid: %d',not_inscene))
+                sim.Info(sprintf('Vehicle IDs are not valid: %d\n',not_inscene))
                 state.Driver = state.Driver(inscene);
                 state.Driver_IDs = state.Driver_IDs(inscene);
             end
@@ -121,7 +130,11 @@ classdef Simulator < handle
             num_citations = sum(action);
             
             % Take action
-            [~,action_rows] = intersect(sim.scene.ID,state.Driver_IDs(action));
+            if sim.fast_mode
+                [~,action_rows] = intersect(sim.scene(:,sim.cmodel.Col('ID')),state.Driver_IDs(action));
+            else
+                [~,action_rows] = intersect(sim.scene.ID,state.Driver_IDs(action));
+            end
             sim.scene(action_rows,:) = [];
             sim.UpdateScene;
             sim.Info(sprintf('Citing vehicle IDs: %i',state.Driver_IDs(action)));
@@ -153,48 +166,6 @@ classdef Simulator < handle
             state.Police = zeros(1,num_police);
             state.Driver = zeros(1,num_driver);
             state = sim.UpdateDriverState(state);
-        end
-        
-        % Updates a state structure with the drivers in the current scene
-        % with the highest reward values
-        function state = UpdateDriverState(sim,state)
-            num_driver = length(state.Driver);
-            
-            rewards = sim.citations.reward(sim.scene.State);
-            [~,max_reward] = sort(rewards,'descend'); 
-            
-            state.Driver = sim.scene.State(max_reward(1:num_driver));
-            state.Driver_IDs = sim.scene.ID(max_reward(1:num_driver));
-        end
-        
-        % Generates the structures for the citations and rewards
-        function cite_rewards = RewardModel(sim,use_tailgating)
-            cite_descriptions = {...
-                'No citation';...
-                'Speeding';...
-                'Weaving';...
-                'Tailgating';...
-                'Speeding + Weaving';...
-                'Speeding + Tailgating';...
-                'Weaving + Tailgating';...
-                'Speeding + Weaving + Tailgating'};
-            
-            sim.cite_logicals = [0 0 0; 1 0 0; 0 1 0; 0 0 1; 1 1 0; 1 0 1; 0 1 1; 1 1 1];
-            tickets = [sim.speed_ticket; sim.weaving_ticket; sim.tailgating_ticket];
-            
-            if ~use_tailgating
-                inds = logical(sim.cite_logicals(:,3));
-                cite_descriptions(inds) = [];
-                sim.cite_logicals(inds,:) = [];
-            end
-            cite_rewards = sim.cite_logicals*tickets;
-            cite_rewards(1) = sim.zero_reward;
-            
-            for i = 1:length(cite_rewards)
-                sim.citations(i).reward = cite_rewards(i);
-                sim.citations(i).descriptions = cite_descriptions{i};
-            end
-            sim.citations = struct2table(sim.citations);
         end
         
         % Returns the number of vehicles currently in the scene
@@ -250,10 +221,18 @@ classdef Simulator < handle
         % Car Model
         function UpdateScene(sim)
             % Decrement time steps
-            sim.scene.Time = sim.scene.Time - 1;
+            if sim.fast_mode
+                sim.scene(:,sim.cmodel.Col('Time')) = sim.scene(:,sim.cmodel.Col('Time')) - 1;
+            else
+                sim.scene.Time = sim.scene.Time - 1;
+            end
             
             % Remove vehicles out of frame
-            sim.scene(sim.scene.Time<0,:) = [];
+            if sim.fast_mode
+                sim.scene(sim.scene(:,sim.cmodel.Col('Time'))<0,:) = [];
+            else
+                sim.scene(sim.scene.Time<0,:) = [];
+            end
             
             % Add new vehicles
             cur_num_vehicles = round(sim.num_vehicles.random);
@@ -264,8 +243,10 @@ classdef Simulator < handle
                 % Assign vehicle state
                 new_vehicles(:,sim.cmodel.Col('State')) = sim.CalcDriverState(new_vehicles);
                 % Append to scene
-                new_vehicles = array2table(new_vehicles);
-                new_vehicles.Properties.VariableNames = sim.cmodel.ColNames;
+                if ~sim.fast_mode
+                    new_vehicles = array2table(new_vehicles);
+                    new_vehicles.Properties.VariableNames = sim.cmodel.ColNames;
+                end
                 sim.scene = [sim.scene;new_vehicles];
             end
             sim.cur_id = sim.cur_id + n_new_vehicles;
@@ -280,14 +261,68 @@ classdef Simulator < handle
             is_tailgater = false(n_vehicles,1);
             for i = 1:n_vehicles
                 state(i) = find(sim.cite_logicals(:,1) == is_speeder(i)...
-                              & sim.cite_logicals(:,2) == is_weaver(i)...
-                              & sim.cite_logicals(:,3) == is_tailgater(i));
+                              & sim.cite_logicals(:,2) == is_weaver(i)...& sim.cite_logicals(:,3) == is_tailgater(i)
+                              );
             end
         end
-       
+        
+        % Updates a state structure with the drivers in the current scene
+        % with the highest reward values
+        function state = UpdateDriverState(sim,state)
+            num_driver = length(state.Driver);
+            
+            if sim.fast_mode
+                rewards = sim.citations.reward(sim.scene(:,sim.cmodel.Col('State')));
+            else
+                rewards = sim.citations.reward(sim.scene.State);
+            end
+            [~,max_reward] = sort(rewards,'descend'); 
+            
+            if sim.fast_mode
+                state.Driver = sim.scene(max_reward(1:num_driver),sim.cmodel.Col('State'));
+                state.Driver_IDs = sim.scene(max_reward(1:num_driver),sim.cmodel.Col('ID'));
+            else
+                state.Driver = sim.scene.State(max_reward(1:num_driver));
+                state.Driver_IDs = sim.scene.ID(max_reward(1:num_driver));
+            end
+        end
+        
+        % Generates the structures for the citations and rewards
+        function cite_rewards = RewardModel(sim,use_tailgating)
+            cite_descriptions = {...
+                'No citation';...
+                'Speeding';...
+                'Weaving';...
+                'Tailgating';...
+                'Speeding + Weaving';...
+                'Speeding + Tailgating';...
+                'Weaving + Tailgating';...
+                'Speeding + Weaving + Tailgating'};
+            
+            sim.cite_logicals = [0 0 0; 1 0 0; 0 1 0; 0 0 1; 1 1 0; 1 0 1; 0 1 1; 1 1 1];
+            tickets = [sim.speed_ticket; sim.weaving_ticket; sim.tailgating_ticket];
+            
+            if ~use_tailgating
+                inds = logical(sim.cite_logicals(:,3));
+                cite_descriptions(inds) = [];
+                sim.cite_logicals(inds,:) = [];
+            end
+            cite_rewards = sim.cite_logicals*tickets;
+            cite_rewards(1) = sim.zero_reward;
+            
+            for i = 1:length(cite_rewards)
+                sim.citations(i).reward = cite_rewards(i);
+                sim.citations(i).descriptions = cite_descriptions{i};
+            end
+            sim.citations = struct2table(sim.citations);
+        end
         
         function [inscene,NotValidIDs] = InScene(sim,IDs)
-            inscene = ismember(IDs,sim.scene.ID);
+            if sim.fast_mode
+                inscene = ismember(IDs,sim.scene(:,sim.cmodel.Col('ID')));
+            else
+                inscene = ismember(IDs,sim.scene.ID);
+            end
             NotValidIDs = IDs(~inscene);
         end
         
