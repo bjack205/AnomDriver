@@ -49,11 +49,11 @@ classdef Simulator < handle
         cmodel = CarModel; % Car Model object
         
         % Rewards and citation criteria
-        zero_reward = 50;
-        speed_ticket = 100;
-        weaving_ticket = 150;
+        zero_reward = 50;       
+        speed_ticket = 100;     
+        weaving_ticket = 150;   
         tailgating_ticket = 200;
-        no_police_cost = 100;
+        no_police_cost = 100;   
         speed_limit = 29;       % m/s (65 mph)
         weaver_limit = 3;       % number of lane changes
         tailgater_limit = 1;    % average distance
@@ -75,27 +75,9 @@ classdef Simulator < handle
         function sim = Simulator
 
             % Citation structure
-            cite_descriptions = {...
-                'No citation';...
-                'Speeding';...
-                'Weaving';...
-                'Tailgating';...
-                'Speeding + Weaving';...
-                'Speeding + Tailgating';...
-                'Weaving + Tailgating';...
-                'Speeding + Weaving + Tailgating'};
-            
-            sim.cite_logicals = [0 0 0; 1 0 0; 0 1 0; 0 0 1; 1 1 0; 1 0 1; 0 1 1; 1 1 1];
-            tickets = [sim.speed_ticket; sim.weaving_ticket; sim.tailgating_ticket];
-            cite_rewards = sim.cite_logicals*tickets;
-            cite_rewards(1) = sim.zero_reward;
-            
-            for i = 1:length(cite_rewards)
-                sim.citations(i).reward = cite_rewards(i);
-                sim.citations(i).descriptions = cite_descriptions{i};
-            end
-            sim.citations = struct2table(sim.citations);
-            
+            use_tailgating = 0;
+            sim.RewardModel(use_tailgating);
+
             sim.Reset;
         end
         
@@ -148,19 +130,71 @@ classdef Simulator < handle
             sprime = state;
             
             % Decrement police state
-            sprime.Police = sprime.Police - 1;
+            sprime.Police = max(sprime.Police - 1,0);
             
             % Update police wait time for dispactched police vehicles
-            next_police = find(state.Police==0);
-            sprime.Police(next_police) = round(sim.police_wait.random(1,num_citations));
+            if num_citations > 0
+                next_police = find(state.Police==0,num_citations);
+                sprime.Police(next_police) = round(sim.police_wait.random(1,num_citations));
+            end
             
+            % Update driver states with drivers with maximum reward
+            sprime = sim.UpdateDriverState(sprime);
+            
+        end
+        
+        % Resets the sim and returns the initial state
+        % Inputs:
+        %   num_police: number of police cars
+        %   num_driver: number of drivers tracked in state.Driver
+        function state = Initialize(sim,num_police,num_driver)
+            sim.Reset;
+            state = sim.StateTemplate;
+            state.Police = zeros(1,num_police);
+            state.Driver = zeros(1,num_driver);
+            state = sim.UpdateDriverState(state);
+        end
+        
+        % Updates a state structure with the drivers in the current scene
+        % with the highest reward values
+        function state = UpdateDriverState(sim,state)
+            num_driver = length(state.Driver);
             
             rewards = sim.citations.reward(sim.scene.State);
             [~,max_reward] = sort(rewards,'descend'); 
             
-            sprime.Driver = sim.scene.State(max_reward(1:num_driver));
-            sprime.Driver_IDs = sim.scene.ID(max_reward(1:num_driver));
+            state.Driver = sim.scene.State(max_reward(1:num_driver));
+            state.Driver_IDs = sim.scene.ID(max_reward(1:num_driver));
+        end
+        
+        % Generates the structures for the citations and rewards
+        function cite_rewards = RewardModel(sim,use_tailgating)
+            cite_descriptions = {...
+                'No citation';...
+                'Speeding';...
+                'Weaving';...
+                'Tailgating';...
+                'Speeding + Weaving';...
+                'Speeding + Tailgating';...
+                'Weaving + Tailgating';...
+                'Speeding + Weaving + Tailgating'};
             
+            sim.cite_logicals = [0 0 0; 1 0 0; 0 1 0; 0 0 1; 1 1 0; 1 0 1; 0 1 1; 1 1 1];
+            tickets = [sim.speed_ticket; sim.weaving_ticket; sim.tailgating_ticket];
+            
+            if ~use_tailgating
+                inds = logical(sim.cite_logicals(:,3));
+                cite_descriptions(inds) = [];
+                sim.cite_logicals(inds,:) = [];
+            end
+            cite_rewards = sim.cite_logicals*tickets;
+            cite_rewards(1) = sim.zero_reward;
+            
+            for i = 1:length(cite_rewards)
+                sim.citations(i).reward = cite_rewards(i);
+                sim.citations(i).descriptions = cite_descriptions{i};
+            end
+            sim.citations = struct2table(sim.citations);
         end
         
         % Returns the number of vehicles currently in the scene
@@ -250,6 +284,7 @@ classdef Simulator < handle
                               & sim.cite_logicals(:,3) == is_tailgater(i));
             end
         end
+       
         
         function [inscene,NotValidIDs] = InScene(sim,IDs)
             inscene = ismember(IDs,sim.scene.ID);
