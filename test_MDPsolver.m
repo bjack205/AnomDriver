@@ -2,7 +2,6 @@
 % AnomDriver
 % tests of simulator for MDP solver implementation
 
-clear;clc;close all;
 %%% Variables we can change
 
 % determine size of state space
@@ -22,7 +21,9 @@ NOCLT = 0;
 % create an instance of the simulator
 sim = Simulator; 
 % initialize state
-state = Initialize(sim,num_police,num_driver);
+load('feaDistributions.mat')
+
+state = Initialize(sim,num_police,num_driver,feature_dist);
 
 %%FIX ONCE SIMULATOR IS UPDATED
 num_driver_infractions = min(4,size(sim.citations,1)); % number of unique infractions a driver can be guilty of

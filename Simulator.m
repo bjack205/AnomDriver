@@ -160,12 +160,13 @@ classdef Simulator < handle
         % Inputs:
         %   num_police: number of police cars
         %   num_driver: number of drivers tracked in state.Driver
-        function state = Initialize(sim,num_police,num_driver)
+        function state = Initialize(sim,num_police,num_driver,feature_distributions)
             sim.Reset;
             state = sim.StateTemplate;
             state.Police = zeros(1,num_police);
             state.Driver = zeros(1,num_driver);
             state = sim.UpdateDriverState(state);
+            sim.cmodel.distributions(end:-1:end-5) = feature_distributions(end:-1:end-5);
         end
         
         % Returns the number of vehicles currently in the scene
