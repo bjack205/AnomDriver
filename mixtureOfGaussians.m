@@ -7,17 +7,15 @@ n = 2; % dimension of each training example
 k = 4; % number of clusters
 
 %% Generate k 2-dimensional Gaussians and sample from them to create training examples
-examples = 150;
+examples = 100;
 mu_initial = [];
 sigma_initial = [];
 Xi = [];
 X = [];
 for i = 1:k
     mu_initial{i} = 5*randn(1,n);
-        d = 5*rand(n,1); % The diagonal values
-        t = triu(bsxfun(@min,d,d.').*rand(n),1); % The upper trianglar random values
-        M = diag(d)+t+t.'; % Put them together in a symmetric matrix
-    sigma_initial{i} = M;
+    %tmp = rand(n,n);
+    sigma_initial{i} = rand(1)*eye(n);%tmp'*tmp;
     Xi{i} = randn(examples, n) * chol(sigma_initial{i}) + repmat(mu_initial{i}, examples, 1);
     X = cat(1,X,Xi{i});
 end
