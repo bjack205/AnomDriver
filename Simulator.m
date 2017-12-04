@@ -124,7 +124,7 @@ classdef Simulator < handle
             [~,action_rows] = intersect(sim.scene.ID,state.Driver_IDs(action));
             sim.scene(action_rows,:) = [];
             sim.UpdateScene;
-            sim.Info(sprintf('Citing vehicle IDs: %i',state.Driver_IDs(action)));
+            %sim.Info(sprintf('Citing vehicle IDs: %i',state.Driver_IDs(action)));
             
             % Update state
             sprime = state;
@@ -236,7 +236,7 @@ classdef Simulator < handle
                 % Assign cost to bad police allocation
                 reward = -sim.no_police_cost*(num_citations-police_available);
                 
-                sim.Info('Assigned more citations than available cars. Assigning penalty')
+                %sim.Info('Assigned more citations than available cars. Assigning penalty')
             else
                 reward = 0;
             end

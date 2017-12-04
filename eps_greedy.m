@@ -1,4 +1,4 @@
-function [ action ] = eps_greedy(U,state_ind,num_states,num_actions,T,R,gamma,eps  )
+function [ action ] = eps_greedy(U,state_ind,num_states,num_actions,T,R,gamma,eps,decay)
 % epsilon-greedy policy solver
 
 if rand(1) < eps
