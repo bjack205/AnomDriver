@@ -106,3 +106,6 @@ while (NOCLT < NO_LEARNING_THRESHOLD)
     end
 end
 toc
+
+state_table = indexed_states(@state_to_index,U,num_police,num_driver,num_police_wait,num_driver_infractions );
+save('mdp_test1','T','R','U','gamma');
