@@ -65,7 +65,7 @@ classdef Simulator < handle
         % Debug vars
         action_max = 1; % (1) if action is integer of number of citations to issue
                         % (0) if action is binary vector same size as state.Driver 
-        print_info = 1;
+        print_info = 0;
         fast_mode = 1;
         
     end
