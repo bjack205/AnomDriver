@@ -24,7 +24,6 @@ function [ T ] = indexed_states(state_to_index,U,num_police,num_driver,num_polic
             state.Driver = Dfull(j,:);
             state_ind = state_to_index(state,num_police_wait,num_driver_infractions);
             %disp(state_ind);
-            T{state_ind} = state;
             States(state_ind).Driver = state.Driver;
             States(state_ind).Police = state.Police;
             States(state_ind).U = U(state_ind);
