@@ -137,7 +137,7 @@ classdef Simulator < handle
             end
             sim.scene(action_rows,:) = [];
             sim.UpdateScene;
-            sim.Info(sprintf('Citing vehicle IDs: %i',state.Driver_IDs(action)));
+            %sim.Info(sprintf('Citing vehicle IDs: %i',state.Driver_IDs(action)));
             
             % Update state
             sprime = state;
@@ -160,12 +160,13 @@ classdef Simulator < handle
         % Inputs:
         %   num_police: number of police cars
         %   num_driver: number of drivers tracked in state.Driver
-        function state = Initialize(sim,num_police,num_driver)
+        function state = Initialize(sim,num_police,num_driver,feature_distributions)
             sim.Reset;
             state = sim.StateTemplate;
             state.Police = zeros(1,num_police);
             state.Driver = zeros(1,num_driver);
             state = sim.UpdateDriverState(state);
+            sim.cmodel.distributions(end:-1:end-5) = feature_distributions(end:-1:end-5);
         end
         
         % Returns the number of vehicles currently in the scene
@@ -207,7 +208,7 @@ classdef Simulator < handle
                 % Assign cost to bad police allocation
                 reward = -sim.no_police_cost*(num_citations-police_available);
                 
-                sim.Info('Assigned more citations than available cars. Assigning penalty')
+                %sim.Info('Assigned more citations than available cars. Assigning penalty')
             else
                 reward = 0;
             end

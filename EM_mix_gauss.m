@@ -50,7 +50,6 @@ for r = 1:iterations
 
     % M-step
         mu_old = mu;
-        sigma = cell(1,k);
         for j = 1:k
             % recalculate priors
             phi(j) = mean(W(:,j),1);
@@ -58,11 +57,7 @@ for r = 1:iterations
             % recalculate means
             mu(j,:) = (W(:,j)'*X)./sum(W(:,j),1);
 
-            sigma_k = zeros(n,n);
-
-            for i = 1:m
-                sigma_k = sigma_k + (W(i,j).*(X(i,:)-mu(j,:))'*(X(i,:)-mu(j,:)));
-            end
+            sigma_k = (repmat(W(:,j),1,n).*(X-repmat(mu(j,:),m,1)))'*(X-repmat(mu(j,:),m,1));
             sigma{j} = sigma_k./sum(W(:,j));
         end
         error = sum((mu-mu_old).^2);
