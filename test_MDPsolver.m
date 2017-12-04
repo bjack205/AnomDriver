@@ -35,7 +35,8 @@ num_states = (num_police_wait^num_police)*(num_driver_infractions^num_driver); %
 % initialize counts
 N = ones(num_states, num_actions, num_states); % count for N(s,a,s')
 rho = zeros(num_states, num_actions); % count for rho(s,a)
-Nsp = zeros(num_states,1); 
+Nsp = zeros(num_states,1);
+
 % initialize MDP
 U = 0.1*randn(num_states,1); 
 T = 1/num_states*ones(num_states, num_actions, num_states); % transition probability T(sp|s,a) -> T(s,a,sp)
@@ -43,19 +44,20 @@ R = zeros(num_states, num_actions);
 
 
 % MDP solver
-while (NOCLT < NO_LEARNING_THRESHOLD) %;&& attempts < max_attempts
+tic
+while (NOCLT < NO_LEARNING_THRESHOLD)
     
     % gain experience 'num_update' times before updating MDP model
     for i = 1:num_update
         % query simulator 
         state_ind = state_to_index(state,num_police_wait,num_driver_infractions);
-        action = feval(policy,U,state_ind,num_states,num_actions,T,R,gamma,eps,decay);
-        [new_state, reward] = Run(sim,state,action);
+        action_ind = feval(policy,U,state_ind,num_states,num_actions,T,R,gamma,eps,decay);
+        [new_state, reward] = Run(sim,state,action_ind-1);
         new_state_ind = state_to_index(new_state,num_police_wait,num_driver_infractions);
 
         % update counts
-        N(state_ind,action,new_state_ind) = N(state_ind,action,new_state_ind) + 1;
-        rho(state_ind,action) = rho(state_ind,action) + reward;
+        N(state_ind,action_ind,new_state_ind) = N(state_ind,action_ind,new_state_ind) + 1;
+        rho(state_ind,action_ind) = rho(state_ind,action_ind) + reward;
         
         % increment the state
         state = new_state;
@@ -81,10 +83,11 @@ while (NOCLT < NO_LEARNING_THRESHOLD) %;&& attempts < max_attempts
         Uold = U;
         for i = 1:num_states;
             temp = zeros(1,num_actions);
-            for k = 1:num_states
-                temp = temp + T(i,:,k)*U(k);
-            end
-            U(i) = max(R(i,:) + gamma*temp);
+%             for k = 1:num_states
+%                 temp = temp + T(i,:,k)*U(k);
+%             end
+            temp = squeeze(T(i,:,:))*U;
+            U(i) = max(R(i,:) + gamma*temp');
         end
         iteration = iteration + 1;
         max_abs_diff = max(abs(U-Uold));
@@ -98,7 +101,8 @@ while (NOCLT < NO_LEARNING_THRESHOLD) %;&& attempts < max_attempts
     epoch = epoch + 1;
 
     % print number of epochs
-    if rem(epoch,100) == 0
+    if rem(epoch,100) == 0 || epoch == 1
         fprintf('Epoch: %i\n',epoch)
     end
 end
+toc
