@@ -79,7 +79,7 @@ while (NOCLT < NO_LEARNING_THRESHOLD)
     % Value Iteration
     iteration = 0;
     max_abs_diff = tolerance + 1;
-    while max_abs_diff > tolerance && iteration < 10
+    while max_abs_diff > tolerance 
         Uold = U;
         for i = 1:num_states;
             temp = zeros(1,num_actions);
@@ -106,3 +106,6 @@ while (NOCLT < NO_LEARNING_THRESHOLD)
     end
 end
 toc
+
+state_table = indexed_states(@state_to_index,U,num_police,num_driver,num_police_wait,num_driver_infractions );
+save('mdp_test1','T','R','U','gamma');
