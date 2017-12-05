@@ -65,7 +65,9 @@ xlabel('Epochs')
 ylabel('Average Cumulative Reward per Time Step')
 legend('* Policy','Always Send Policy','Random Policy')
 
-%%
+%% 
 state_table.policy = policy_ind-1;
 state_table.naive_Policy = naivePolicy_ind'-1;
 state_table.random_Policy = randomPolicy_ind'-1;
+
+critical_states = state_table(state_table.Police==0,:);
