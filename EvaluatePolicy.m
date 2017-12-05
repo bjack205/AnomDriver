@@ -1,24 +1,14 @@
 % Evaluate Policy
-function R = EvaluatePolicy(policy)
-    sim = Simulator;
-    
-    % Parameters
-    NUM_ITERATIONS = 1000;
-    NUM_POLICE = 2;
-    NUM_DRIVER = 4;
-    
-    % 
+function R = EvaluatePolicy(policy_ind,MDP,NUM_ITERATIONS)
     R = 0;
-    
-    % Initialize Simulator
-    state = sim.Initialize(NUM_POLICE,NUM_DRIVER);
-    s = state_to_index(state,mean(sim.police_wait)+1,size(sim.citations,1));
+    state = Initialize(MDP.sim,MDP.num_police,MDP.num_driver,MDP.feature_dist); % initialize new state
+    s = state_to_index(state,MDP.num_police_wait,MDP.num_driver_infractions);
     
     % Run simulator for fixed number of iterations, accumulating reward
     for i = 1:NUM_ITERATIONS
-        action = policy(s);
-        [state,reward] = sim.Run(state,action);
+        action_ind = policy_ind(s);
+        [state,reward] = MDP.sim.Run(state,action_ind-1);
         R = R + reward;
-        s = state_to_index(state,mean(sim.police_wait)+1,size(sim.citations,1));
+        s = state_to_index(state,MDP.num_police_wait,MDP.num_driver_infractions);
     end
 end

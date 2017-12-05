@@ -1,5 +1,7 @@
-function [ T ] = indexed_states(state_to_index,U,num_police,num_driver,num_police_wait,num_driver_infractions )
+function [ policy_ind ] = NaivePolicy(state_to_index,num_police,num_driver,num_police_wait,num_driver_infractions )
     state = struct();
+    
+    %enumerate all possible police and driver states
     P = combnk(0:num_police_wait-1,num_police);
     Pfull = [];
     for i = 1:size(P,1)
@@ -18,18 +20,14 @@ function [ T ] = indexed_states(state_to_index,U,num_police,num_driver,num_polic
         Dfull = cat(1,Dfull,i*ones(1,num_driver));
     end
        
+    % evaluate each state
     for i = 1:size(Pfull,1)
         state.Police = Pfull(i,:);
         for j = 1:size(Dfull,1)
             state.Driver = Dfull(j,:);
             state_ind = state_to_index(state,num_police_wait,num_driver_infractions);
-            States(state_ind).Driver = state.Driver;
-            States(state_ind).Police = state.Police;
-            States(state_ind).U = U(state_ind);
+            policy_ind(state_ind) = sum(state.Police == 0) + 1;
         end
     end
-    
-    T = struct2table(States);
-
 end
 
