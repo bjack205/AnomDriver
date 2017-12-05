@@ -1,4 +1,5 @@
 function [ policy_ind ] = NaivePolicy(state_to_index,num_police,num_driver,num_police_wait,num_driver_infractions )
+    % if policy are available, always allocate
     state = struct();
     
     %enumerate all possible police and driver states

@@ -40,8 +40,9 @@ state_table = indexed_states(@state_to_index,U,MDP.num_police,MDP.num_driver,MDP
 NUM_ITERATIONS = 500; % number of timesteps to evaluate a policy
 NUM_EVALS = 5; % number of times to evaluate each policy on a newly initialized scene
 R = zeros(size(solution,1),NUM_EVALS);
-R_naive = zeros(size(solution,1),NUM_EVALS);
-R_random = zeros(size(solution,1),NUM_EVALS);
+R_naive = zeros(NUM_EVALS,1);
+R_random = zeros(NUM_EVALS,1);
+
 naivePolicy_ind = NaivePolicy(@state_to_index,MDP.num_police,MDP.num_driver,MDP.num_police_wait,MDP.num_driver_infractions);
 randomPolicy_ind = randi([1 MDP.num_actions],1,MDP.num_states);
 
@@ -51,19 +52,21 @@ for i = 1:max(size(solution))
     [policy_ind,~] = CalculatePolicy(solution(i).U,solution(i).T,solution(i).R,params.gamma);
     for j = 1:NUM_EVALS
         R(i,j) = EvaluatePolicy(policy_ind,MDP,NUM_ITERATIONS);
-        R_naive(i,j) = EvaluatePolicy(naivePolicy_ind,MDP,NUM_ITERATIONS);
-        R_random(i,j) = EvaluatePolicy(randomPolicy_ind,MDP,NUM_ITERATIONS);
+        if i == 1
+            R_naive(j) = EvaluatePolicy(naivePolicy_ind,MDP,NUM_ITERATIONS);
+            R_random(j) = EvaluatePolicy(randomPolicy_ind,MDP,NUM_ITERATIONS);
+        end
     end
 end
-
 errorbar([solution(2:end).epoch],mean(R(2:end,:),2)./NUM_ITERATIONS,std(R(2:end,:),0,2)./NUM_ITERATIONS);
-errorbar([solution(2:end).epoch],mean(R_naive(2:end,:),2)./NUM_ITERATIONS,std(R_naive(2:end,:),0,2)./NUM_ITERATIONS);
-errorbar([solution(2:end).epoch],mean(R_random(2:end,:),2)./NUM_ITERATIONS,std(R_random(2:end,:),0,2)./NUM_ITERATIONS);
-
+%errorbar([solution(2:end).epoch],mean(R_naive(2:end,:),2)./NUM_ITERATIONS,std(R_naive(2:end,:),0,2)./NUM_ITERATIONS);
+%errorbar([solution(2:end).epoch],mean(R_random(2:end,:),2)./NUM_ITERATIONS,std(R_random(2:end,:),0,2)./NUM_ITERATIONS);
+plot(linspace(0,solution(end).epoch,100),mean(R_naive)/NUM_ITERATIONS*ones(1,100))
+plot(linspace(0,solution(end).epoch,100),mean(R_random)/NUM_ITERATIONS*ones(1,100))
 title('Cumulative Reward v Training Epochs')
 xlabel('Epochs')
 ylabel('Average Cumulative Reward per Time Step')
-legend('* Policy','Always Send Policy','Random Policy')
+legend('Optimal Policy','Always Send Policy','Random Policy')
 
 %% 
 state_table.policy = policy_ind-1;
