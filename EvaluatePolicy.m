@@ -11,7 +11,8 @@ function R = EvaluatePolicy(policy)
     R = 0;
     
     % Initialize Simulator
-    state = sim.Initialize(NUM_POLICE,NUM_DRIVER);
+    load('feaDistributions.mat')
+    state = sim.Initialize(NUM_POLICE,NUM_DRIVER,feature_dist);
     s = state_to_index(state,mean(sim.police_wait)+1,size(sim.citations,1));
     
     % Run simulator for fixed number of iterations, accumulating reward
