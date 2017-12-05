@@ -5,7 +5,7 @@ ind = 1;
 R = 1;
 for i = 1:length(state.Police)
     if i == 1
-        ind = ind + (state.Police(i)) ;
+        ind = ind + (state.Police(i));
     else
         ind = ind + (state.Police(i))*R;
     end
