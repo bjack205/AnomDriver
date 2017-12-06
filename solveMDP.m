@@ -73,10 +73,11 @@ std_R_per_allocation = std(R./A,0,2);
 errorbar(log10([solution.epoch]),mean_R_per_allocation,std_R_per_allocation);
 plot(log10(linspace(1,solution(end).epoch,100)),mean(R_naive./A_naive)*ones(1,100))
 plot(log10(linspace(1,solution(end).epoch,100)),mean(R_random./A_random)*ones(1,100))
+plot(log10(linspace(1,solution(end).epoch,100)),zeros(1,100))
 %title('Cumulative Reward v Training Epochs')
 xlabel('log_{10}(epoch)')
 ylabel(sprintf('Average Cumulative Reward\n per Allocation'));
-legend('Optimal Policy','Always Send Policy','Random Policy')
+legend('Optimal Policy','Always-Send Policy','Random Policy','Donut & Coffee Policy')
 
 % compare policies
 state_table.policy = policy_ind-1;
