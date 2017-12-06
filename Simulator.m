@@ -53,7 +53,7 @@ classdef Simulator < handle
         weaving_ticket = 150;   
         tailgating_ticket = 200;
         no_police_cost = 100;
-        stay_reward = 5;        % reward for not allocating an available police
+        stay_reward = 0;        % reward for not allocating an available police
         speed_limit = 17;       % m/s (38 mph)
         weaver_limit = 3;       % number of lane changes
         tailgater_limit = 1;    % average distance

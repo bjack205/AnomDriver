@@ -1,4 +1,4 @@
-function [ solution ] = MDPsolver( MDP, params)
+function [ solution ] = MDPsolver( MDP, params, cache)
 %%% MDP solver
 
 % MDP: parameters defining the MDP
@@ -34,7 +34,8 @@ iter = 1;
 U = 0.1*randn(MDP.num_states,1); 
 T = 1/MDP.num_states*ones(MDP.num_states, MDP.num_actions, MDP.num_states); % transition probability T(sp|s,a) -> T(s,a,sp); initially equally weighted
 R = zeros(MDP.num_states, MDP.num_actions);
-temp = zeros(1,MDP.num_actions);
+%temp = zeros(1,MDP.num_actions);
+%temp1 = zeros(MDP.num_states,MDP.num_actions);
 
 solution = [];
 
@@ -67,9 +68,16 @@ while (NOCLT < params.NO_LEARNING_THRESHOLD)
     while max_abs_diff > params.tolerance 
         Uold = U;
         for i = 1:MDP.num_states;
-            temp = squeeze(T(i,:,:))*U;
-            U(i) = max(R(i,:) + params.gamma*temp');
+            %temp = squeeze(T(i,:,:))*U;
+            U(i) = max(R(i,:) + params.gamma*(squeeze(T(i,:,:))*U)');
         end
+        
+%         iteration over actions
+%         for i = 1:MDP.num_actions
+%             temp1(:,i) = R(:,i) + params.gamma*squeeze(T(:,i,:))*Uold;
+%         end
+%         U = max(temp1')';
+            
         iteration = iteration + 1;
         max_abs_diff = max(abs(U-Uold));
     end
@@ -82,13 +90,25 @@ while (NOCLT < params.NO_LEARNING_THRESHOLD)
     epoch = epoch + 1;
 
     % cache and print 
-    if (epoch < 1000 && rem(epoch,params.backup/10) == 0) || rem(epoch,params.backup) == 0 || epoch == 1
-        % store current model
-        solution(iter).U = U; % cache current value function
-        solution(iter).T = T; % cache current transition probabilities
-        solution(iter).R = R; % cache current reward function
-        solution(iter).epoch = epoch;
-        iter = iter + 1;
+    if cache
+        if (epoch < 1000 && rem(epoch,params.backup/10) == 0) || rem(epoch,params.backup) == 0 || epoch == 1
+            % store current model
+            solution(iter).U = U; % cache current value function
+            solution(iter).T = T; % cache current transition probabilities
+            solution(iter).R = R; % cache current reward function
+            solution(iter).epoch = epoch;
+            iter = iter + 1;
+            
+        end
+    else
+        if NOCLT >= params.NO_LEARNING_THRESHOLD
+            solution.U = U; % cache current value function
+            solution.T = T; % cache current transition probabilities
+            solution.R = R; % cache current reward function
+            solution.epoch = epoch;
+        end
+    end
+    if rem(epoch,params.backup) == 0 || epoch == 1
         fprintf('Epoch: %i\n',epoch)
     end
 end
