@@ -79,7 +79,7 @@ while (NOCLT < NO_LEARNING_THRESHOLD)
     % Value Iteration
     iteration = 0;
     max_abs_diff = tolerance + 1;
-    while max_abs_diff > tolerance && iteration < 10
+    while max_abs_diff > tolerance 
         Uold = U;
         for i = 1:num_states;
             temp = zeros(1,num_actions);

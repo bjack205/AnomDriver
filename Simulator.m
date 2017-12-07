@@ -52,8 +52,9 @@ classdef Simulator < handle
         speed_ticket = 100;     
         weaving_ticket = 150;   
         tailgating_ticket = 200;
-        no_police_cost = 100;   
-        speed_limit = 29;       % m/s (65 mph)
+        no_police_cost = 100;
+        stay_reward = 0;        % reward for not allocating an available police
+        speed_limit = 17;       % m/s (38 mph)
         weaver_limit = 3;       % number of lane changes
         tailgater_limit = 1;    % average distance
         
@@ -169,6 +170,19 @@ classdef Simulator < handle
             sim.cmodel.distributions(end:-1:end-5) = feature_distributions(end:-1:end-5);
         end
         
+        % Assigns the driver state based on vehicle features
+        function state = CalcDriverState(sim,vehicles)
+            n_vehicles = size(vehicles,1);
+            is_speeder = vehicles(:,sim.cmodel.Col('maximum_velocity'))>sim.speed_limit;
+            is_weaver = vehicles(:,sim.cmodel.Col('n_lane_changes'))>sim.weaver_limit;
+            is_tailgater = false(n_vehicles,1);
+            for i = 1:n_vehicles
+                state(i) = find(sim.cite_logicals(:,1) == is_speeder(i)...
+                              & sim.cite_logicals(:,2) == is_weaver(i)...& sim.cite_logicals(:,3) == is_tailgater(i)
+                              );
+            end
+        end
+        
         % Returns the number of vehicles currently in the scene
         function n = n_vehicles(sim)
             n = size(sim.scene,1);
@@ -208,9 +222,10 @@ classdef Simulator < handle
                 % Assign cost to bad police allocation
                 reward = -sim.no_police_cost*(num_citations-police_available);
                 
-                %sim.Info('Assigned more citations than available cars. Assigning penalty')
+                sim.Info('Assigned more citations than available cars. Assigning penalty')
             else
-                reward = 0;
+                % Assign reward for not allocating resources
+                reward = (police_available-num_citations)*sim.stay_reward;
             end
             
             % Calculate reward
@@ -254,18 +269,7 @@ classdef Simulator < handle
             
         end
         
-        % Assigns the driver state based on vehicle features
-        function state = CalcDriverState(sim,vehicles)
-            n_vehicles = size(vehicles,1);
-            is_speeder = vehicles(:,sim.cmodel.Col('maximum_velocity'))>sim.speed_limit;
-            is_weaver = vehicles(:,sim.cmodel.Col('n_lane_changes'))>sim.weaver_limit;
-            is_tailgater = false(n_vehicles,1);
-            for i = 1:n_vehicles
-                state(i) = find(sim.cite_logicals(:,1) == is_speeder(i)...
-                              & sim.cite_logicals(:,2) == is_weaver(i)...& sim.cite_logicals(:,3) == is_tailgater(i)
-                              );
-            end
-        end
+        
         
         % Updates a state structure with the drivers in the current scene
         % with the highest reward values
