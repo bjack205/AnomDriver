@@ -1,0 +1,109 @@
+function [ solution ] = MDPsolver_reduced( MDP, params, cache)
+%%% MDP solver
+
+% MDP: parameters defining the MDP
+    % MDP.sim: instance of Simulator class
+    % MDP.num_police: number of police
+    % MDP.num_driver: number of anomalous drivers
+    % MDP.num_driver_infractions: number of unique infractions a driver can be guilty of
+    % MDP.num_police_wait: number of values each police can be in
+    % MDP.num_actions: number of availabe actions 
+    % MDP.num_states: cardinality of state space
+    % MDP.s0: initial state
+    % MDP.reduced: array of state indexes that need updating
+% params: paramters defining the solver
+    % params.gamma: discount factor
+    % params.eps: exploration factor
+    % params.decay: rate of decay for eps
+    % params.policy: specify name (ie string) of exploration strategy *NOTE: add decaying eps-greedy policy option
+    % params.tolerance: value iteration convergence criteria
+    % params.num_update: number of iterations before updating the MDP model
+    % params.NO_LEARNING_THRESHOLD: number of consecutive 1-iteration convergence of value function 
+    % params.backup: number of iterations before storing value function again
+%%%
+
+state = MDP.s0;
+
+% initialize counts
+N = ones(length(MDP.reduced), MDP.num_actions, length(MDP.reduced)); % count for N(s,a,s')
+rho = zeros(length(MDP.reduced), MDP.num_actions); % count for rho(s,a)
+epoch = 0;
+NOCLT = 0;
+iter = 1;
+
+% initialize MDP
+U = 0.1*randn(MDP.num_states,1); 
+T = 1/MDP.num_states*ones(length(MDP.reduced), MDP.num_actions, length(MDP.reduced)); % transition probability T(sp|s,a) -> T(s,a,sp); initially equally weighted
+R = zeros(length(MDP.reduced), MDP.num_actions);
+
+solution = [];
+
+% MDP solver
+while (NOCLT < params.NO_LEARNING_THRESHOLD)
+    
+    % gain experience 'num_update' times before updating MDP model
+    for i = 1:params.num_update
+        % query simulator 
+        state_ind = state_to_index(state,MDP.num_police_wait,MDP.num_driver_infractions);
+        action_ind = feval(params.policy,U,state_ind,MDP.num_states,MDP.num_actions,T,R,params.gamma,params.eps,params.decay);
+        [new_state, reward] = Run(MDP.sim,state,action_ind-1);
+        new_state_ind = state_to_index(new_state,MDP.num_police_wait,MDP.num_driver_infractions);
+
+        % update counts
+        N(state_ind,action_ind,new_state_ind) = N(state_ind,action_ind,new_state_ind) + 1;
+        rho(state_ind,action_ind) = rho(state_ind,action_ind) + reward;
+        
+        % increment the state
+        state = new_state;
+    end
+    
+    % update MDP model [vectorized]
+    T = N./repmat(sum(N,3),1,1,MDP.num_states);
+    R = rho./sum(N,3);
+    
+    % Value Iteration
+    iteration = 0;
+    max_abs_diff = params.tolerance + 1;
+    while max_abs_diff > params.tolerance 
+        Uold = U;
+        for i = 1:size(MDP.reduced,1);
+            %temp = squeeze(T(i,:,:))*U;
+            U(MDP.reduced(i)) = max(R(MDP.reduced(i),:) + params.gamma*(squeeze(T(MDP.reduced(i),:,MDP.reduced))*U(MDP.reduced))');
+        end
+        iteration = iteration + 1;
+        max_abs_diff = max(abs(U-Uold));
+    end
+    
+    if iteration == 1
+        NOCLT = NOCLT + 1;
+    else
+        NOCLT = 0;
+    end
+    epoch = epoch + 1;
+
+    % cache and print 
+    if cache
+        if (epoch < 1000 && rem(epoch,params.backup/10) == 0) || rem(epoch,params.backup) == 0 || epoch == 1
+            % store current model
+            solution(iter).U = U; % cache current value function
+            solution(iter).T = T; % cache current transition probabilities
+            solution(iter).R = R; % cache current reward function
+            solution(iter).epoch = epoch;
+            iter = iter + 1;
+            
+        end
+    else
+        if NOCLT >= params.NO_LEARNING_THRESHOLD
+            solution.U = U; % cache current value function
+            solution.T = T; % cache current transition probabilities
+            solution.R = R; % cache current reward function
+            solution.epoch = epoch;
+        end
+    end
+    if rem(epoch,params.backup) == 0 || epoch == 1
+        fprintf('Epoch: %i\n',epoch)
+    end
+end
+
+end
+
