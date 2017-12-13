@@ -1,1 +1,3 @@
 # AnomDriver
+
+run solveMDP.m
